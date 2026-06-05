@@ -1,0 +1,32 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/campaigns",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/action-plans",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/mls-sync",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/listing-alerts",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/email-leads",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/social-publish",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/social-analytics",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

@@ -1,0 +1,171 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { Resend } from 'resend';
+import { rateLimit } from '@/lib/ratelimit';
+
+const NOTIFICATION_EMAIL = process.env.LEAD_NOTIFICATION_EMAIL ?? 'info@vultstack.com';
+const FROM_EMAIL = process.env.FROM_EMAIL ?? 'noreply@vultstack.com';
+
+function esc(s: string | null | undefined): string {
+  return (s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const rl = await rateLimit(req, 'leads');
+    if (!rl.success) {
+      return NextResponse.json({ error: 'Too many requests — please wait a few minutes and try again.' }, { status: 429 });
+    }
+
+    const body = await req.json();
+    const { name, email, phone, message, property_interest, source, business_unit } = body;
+
+    if (!name || !email) {
+      return NextResponse.json({ error: 'Name and email are required' }, { status: 400 });
+    }
+
+    const unit = 'vultstack';
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 });
+    }
+
+    if (typeof name === 'string' && name.length > 200) {
+      return NextResponse.json({ error: 'Name must be 200 characters or fewer' }, { status: 400 });
+    }
+    if (typeof phone === 'string' && phone.length > 30) {
+      return NextResponse.json({ error: 'Phone must be 30 characters or fewer' }, { status: 400 });
+    }
+    if (typeof message === 'string' && message.length > 5000) {
+      return NextResponse.json({ error: 'Message must be 5000 characters or fewer' }, { status: 400 });
+    }
+    if (typeof property_interest === 'string' && property_interest.length > 500) {
+      return NextResponse.json({ error: 'Property interest must be 500 characters or fewer' }, { status: 400 });
+    }
+    if (typeof source === 'string' && source.length > 100) {
+      return NextResponse.json({ error: 'Source must be 100 characters or fewer' }, { status: 400 });
+    }
+
+    // ── Save lead to Supabase ───────────────────────────────────────────────────
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    // Service role key bypasses RLS — required for server-side inserts
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? supabaseKey;
+
+    if (supabaseUrl && serviceKey) {
+      const supabase = createClient(supabaseUrl, serviceKey);
+      await supabase.from('leads').insert([{
+        name,
+        email,
+        phone: phone ?? null,
+        message: message ?? null,
+        property_interest: property_interest ?? null,
+        source: source ?? 'contact',
+        status: 'new',
+      }]);
+    }
+
+    // ── Auto-create CRM client from lead ────────────────────────────────────────
+    if (supabaseUrl && serviceKey) {
+      try {
+        const supabaseAdmin = createClient(supabaseUrl, serviceKey);
+
+        // Find admin to assign as default owner
+        const { data: adminProfile } = await supabaseAdmin
+          .from('crm_profiles').select('id').eq('role', 'admin').limit(1).maybeSingle();
+        const adminId = adminProfile?.id;
+
+        if (adminId) {
+          // Skip duplicate — if a client with this email already exists don't double-create
+          const { data: existing } = await supabaseAdmin
+            .from('crm_clients').select('id').eq('email', email).maybeSingle();
+
+          if (!existing) {
+            const nameParts = name.trim().split(/\s+/);
+            const first_name = nameParts[0] ?? name;
+            const last_name = nameParts.slice(1).join(' ') ?? '';
+
+            // Map source → client type
+            const clientType = source === 'valuation' ? 'Seller'
+              : source === 'landlord' ? 'Landlord/Investor'
+              : source === 'tenant' ? 'Tenant'
+              : 'Buyer';
+
+            const noteLines = [
+              `📩 Website lead — ${source ?? 'contact form'}`,
+              message ? `Message: ${message}` : '',
+              property_interest ? `Property interest: ${property_interest}` : '',
+            ].filter(Boolean);
+
+            const unsubscribe_token = crypto.randomUUID();
+
+            await supabaseAdmin.from('crm_clients').insert([{
+              first_name,
+              last_name,
+              email,
+              phone: phone ?? '',
+              type: clientType,
+              notes: noteLines.join('\n'),
+              agent_id: adminId,
+              assigned_agent_ids: [],
+              lead_source: 'Website',
+              business_unit: unit,
+              tags: ['New Lead', 'Website Lead', 'Vultstack'],
+              unsubscribe_token,
+            }]);
+          }
+        }
+      } catch (crmErr) {
+        // Non-fatal — lead is already saved, just log CRM sync failure
+        console.error('CRM client sync error:', crmErr);
+      }
+    }
+
+    // ── Send email notifications via Resend ────────────────────────────────────
+    if (process.env.RESEND_API_KEY) {
+      const resend = new Resend(process.env.RESEND_API_KEY);
+
+      // Notify the team
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: NOTIFICATION_EMAIL,
+        subject: `📬 New Lead: ${name} — ${source ?? 'Contact Form'}`,
+        html: `
+          <div style="font-family:sans-serif;max-width:600px">
+            <h2 style="color:#1a1a2e">New Lead — Vultstack</h2>
+            <table style="border-collapse:collapse;width:100%">
+              <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Name</td><td style="padding:8px 12px;border:1px solid #eee">${esc(name)}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Email</td><td style="padding:8px 12px;border:1px solid #eee"><a href="mailto:${esc(email)}">${esc(email)}</a></td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Phone</td><td style="padding:8px 12px;border:1px solid #eee">${esc(phone) || '—'}</td></tr>
+              <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Source</td><td style="padding:8px 12px;border:1px solid #eee">${esc(source) || 'contact'}</td></tr>
+              ${property_interest ? `<tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Property</td><td style="padding:8px 12px;border:1px solid #eee">${esc(property_interest)}</td></tr>` : ''}
+              ${message ? `<tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Message</td><td style="padding:8px 12px;border:1px solid #eee">${esc(message)}</td></tr>` : ''}
+            </table>
+          </div>
+        `,
+      });
+
+      // Auto-reply to the lead
+      await resend.emails.send({
+        from: FROM_EMAIL,
+        to: email,
+        subject: 'We received your inquiry — Vultstack',
+        html: `
+          <div style="font-family:sans-serif;max-width:600px">
+            <h2 style="color:#1a1a2e">Hi ${esc(name)},</h2>
+            <p>Thank you for reaching out to <strong>Vultstack</strong>!</p>
+            <p>A member of our team will be in touch within 1 business day.</p>
+            <br/>
+            <p>— The Vultstack Team</p>
+          </div>
+        `,
+      });
+    }
+
+    return NextResponse.json({ success: true, message: 'Lead received' });
+  } catch (err) {
+    console.error('Lead submission error:', err);
+    return NextResponse.json({ error: 'Failed to submit lead' }, { status: 500 });
+  }
+}
