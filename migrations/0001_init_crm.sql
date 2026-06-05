@@ -13,30 +13,6 @@
 
 create extension if not exists pgcrypto;
 
--- ── Helper functions ─────────────────────────────────────────────────────────
-create or replace function public.crm_is_admin()
-returns boolean
-language sql
-stable security definer
-set search_path to 'public'
-as $$
-  select exists (
-    select 1 from public.crm_profiles
-    where id = auth.uid() and role = 'admin'
-  );
-$$;
-
-create or replace function public.handle_updated_at()
-returns trigger
-language plpgsql
-set search_path to 'public', 'pg_catalog'
-as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$;
-
 -- ── Tables ───────────────────────────────────────────────────────────────────
 
 -- Agent/user profiles (1:1 with auth.users)
@@ -458,6 +434,31 @@ create table public.audit_logs (
   ip_address text,
   created_at timestamptz not null default now()
 );
+
+-- ── Helper functions ─────────────────────────────────────────────────────────
+-- Defined after the tables they reference (SQL functions validate their body).
+create or replace function public.crm_is_admin()
+returns boolean
+language sql
+stable security definer
+set search_path to 'public'
+as $$
+  select exists (
+    select 1 from public.crm_profiles
+    where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+create or replace function public.handle_updated_at()
+returns trigger
+language plpgsql
+set search_path to 'public', 'pg_catalog'
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
 
 -- ── Foreign keys ─────────────────────────────────────────────────────────────
 alter table public.crm_profiles
