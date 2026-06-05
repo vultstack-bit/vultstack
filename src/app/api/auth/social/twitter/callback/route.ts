@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { encryptToken } from '@/lib/token-crypto';
 import crypto from 'crypto';
 
-const CRM_BASE = 'https://www.vultstack.com/crm';
+const CRM_BASE = 'https://crm.vultstack.com';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');

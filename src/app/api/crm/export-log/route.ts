@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
           <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Exported</td><td style="padding:8px 12px;border:1px solid #eee">${esc(scope)}</td></tr>
           <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Time</td><td style="padding:8px 12px;border:1px solid #eee">${esc(now)} CT</td></tr>
         </table>
-        <p style="margin-top:16px"><a href="https://www.vultstack.com/crm" style="background:#c9922c;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">View CRM →</a></p>
+        <p style="margin-top:16px"><a href="https://crm.vultstack.com" style="background:#c9922c;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">View CRM →</a></p>
       </div>
     `,
   }).catch(() => {});

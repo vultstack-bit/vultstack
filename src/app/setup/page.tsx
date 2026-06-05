@@ -42,7 +42,7 @@ export default function CRMSetupPage() {
     }
 
     setStatus('done');
-    setTimeout(() => { window.location.href = '/crm'; }, 1500);
+    setTimeout(() => { window.location.href = '/'; }, 1500);
   }
 
   const wrap: React.CSSProperties = {
@@ -90,7 +90,7 @@ export default function CRMSetupPage() {
         <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
         <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 20, fontWeight: 700, color: '#991b1b', marginBottom: 8 }}>Invalid or Expired Link</div>
         <p style={{ color: '#6b7280', fontSize: 14, marginBottom: 20 }}>This invite link is no longer valid. Please ask your admin to send a new invite.</p>
-        <a href="/crm" style={{ color: '#c9922c', fontSize: 14 }}>← Go to Login</a>
+        <a href="/" style={{ color: '#c9922c', fontSize: 14 }}>← Go to Login</a>
       </div>
     </div>
   );

@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
             <tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Type</td><td style="padding:8px 12px;border:1px solid #eee">${esc(clientType)}</td></tr>
             ${message ? `<tr><td style="padding:8px 12px;font-weight:bold;background:#f9f9f9;border:1px solid #eee">Message</td><td style="padding:8px 12px;border:1px solid #eee">${esc(message)}</td></tr>` : ''}
           </table>
-          <p style="margin-top:16px"><a href="https://www.vultstack.com/crm" style="background:#c9922c;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">View in CRM →</a></p>
+          <p style="margin-top:16px"><a href="https://crm.vultstack.com" style="background:#c9922c;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">View in CRM →</a></p>
         </div>
       `,
     }).catch((err) => { console.error('[webhook] lead notification email failed:', err?.message ?? err); }); // non-fatal

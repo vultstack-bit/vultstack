@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { encryptToken } from '@/lib/token-crypto';
 
-const CRM_RETURN = 'https://www.vultstack.com/crm#social';
+const CRM_RETURN = 'https://crm.vultstack.com#social';
 
 export async function GET(req: NextRequest) {
   const code = req.nextUrl.searchParams.get('code');

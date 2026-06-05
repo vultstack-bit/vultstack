@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   },
   description: 'Vultstack — CRM & campaign management.',
   applicationName: 'Vultstack',
+  manifest: '/crm-manifest.json',
   formatDetection: { telephone: true, address: true, email: true },
   icons: {
     icon: [

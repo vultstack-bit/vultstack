@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { encryptToken } from '@/lib/token-crypto';
 
 const REDIRECT_URI = 'https://www.vultstack.com/api/gmail/callback';
-const CRM_URL      = 'https://www.vultstack.com/crm';
+const CRM_URL      = 'https://crm.vultstack.com';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const stateUserId = stateParts[0];
   const stateBu     = stateParts[1] ?? '';
   const isRetry     = stateParts[2] === 'retry';
-  const returnBase  = stateBu ? `${CRM_URL}/${stateBu}` : CRM_URL;
+  const returnBase  = CRM_URL;
 
   if (error || !code || !stateUserId) {
     console.error('[gmail/callback] Missing params or error:', { error, code: !!code, stateUserId });

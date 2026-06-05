@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // Trim any accidental whitespace/newline from the env var (common Vercel paste issue)
 export const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '').trim();
-export const REDIRECT_URL = 'https://www.vultstack.com/crm/setup';
+export const REDIRECT_URL = 'https://crm.vultstack.com/setup';
 
 export function adminClient() {
   return createClient(

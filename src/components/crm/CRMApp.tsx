@@ -750,7 +750,7 @@ export default function CRMApp({ businessUnit = 'vultstack' }: { businessUnit?: 
         .then(r => r.json())
         .then(s => { if (s.signature !== undefined) setProfile(prev => prev ? { ...prev, email_signature: s.signature } : prev); })
         .catch(() => {});
-      window.history.replaceState({}, '', '/crm');
+      window.history.replaceState({}, '', '/');
     }
     if (params.get('gmail') === 'error') {
       const reason = params.get('reason') ?? 'unknown';
@@ -766,7 +766,7 @@ export default function CRMApp({ businessUnit = 'vultstack' }: { businessUnit?: 
       const msg = reasonMessages[reason] ?? 'Gmail connection failed. Please try again.';
       setToast(`⚠ ${msg}`);
       setTimeout(() => setToast(''), 8000);
-      window.history.replaceState({}, '', '/crm');
+      window.history.replaceState({}, '', '/');
     }
   }, [session]); // eslint-disable-line
 
@@ -782,7 +782,7 @@ export default function CRMApp({ businessUnit = 'vultstack' }: { businessUnit?: 
 
       // Access control: non-admins are locked to their assigned business_unit
       if (updated.role !== 'admin' && updated.business_unit && updated.business_unit !== businessUnit) {
-        router.replace(`/crm/${updated.business_unit}`);
+        router.replace('/');
         return;
       }
 

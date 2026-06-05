@@ -3,8 +3,8 @@
 import Script from 'next/script';
 import { usePathname } from 'next/navigation';
 
-// Routes where analytics/tracking should NOT fire
-const EXCLUDED_PREFIXES = ['/crm', '/manage'];
+// The entire site is the private CRM app — analytics/tracking never fire.
+const EXCLUDED_PREFIXES = ['/'];
 
 export default function AnalyticsScripts() {
   const pathname = usePathname();

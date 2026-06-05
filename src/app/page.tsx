@@ -1,7 +1,9 @@
-import { redirect } from 'next/navigation';
+import CRMApp from '@/components/crm/CRMApp';
 
 export const dynamic = 'force-dynamic';
 
+export const metadata = { title: 'Vultstack CRM' };
+
 export default function Home() {
-  redirect('/crm');
+  return <CRMApp businessUnit="vultstack" />;
 }
