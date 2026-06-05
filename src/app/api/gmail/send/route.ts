@@ -166,7 +166,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const pixel = `<img src="https://www.vultstack.com/api/track/open?id=${trackingId}" width="1" height="1" style="display:none" />`;
+    const trackBase = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
+    const pixel = `<img src="${trackBase}/api/track/open?id=${trackingId}" width="1" height="1" style="display:none" />`;
     const bodyWithPixel = `${body}${pixel}`;
 
     const fromLine = agentName ? `${agentName} <${gmailEmail}>` : gmailEmail;

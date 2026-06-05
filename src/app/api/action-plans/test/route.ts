@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   if (!agent?.email) return NextResponse.json({ error: 'Agent email not found' }, { status: 400 });
 
   // Fill merge fields with the agent's own info as sample data
-  const BASE_URL = 'https://www.vultstack.com';
+  const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
   const agentEmail = agent.email || process.env.CRM_CONTACT_EMAIL || 'info@vultstack.com';
   const agentPhone = agent.phone || process.env.CRM_CONTACT_PHONE || '';
   const brokerage  = 'Vultstack';

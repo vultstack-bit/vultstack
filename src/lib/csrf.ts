@@ -24,7 +24,7 @@ function getAllowedOrigins(): Set<string> {
     }
   }
 
-  // Production / staging URL (e.g. https://vultstack.com)
+  // Production / staging URL (e.g. https://crm.vultstack.com)
   if (process.env.NEXT_PUBLIC_SERVER_URL) {
     addWithVariants(process.env.NEXT_PUBLIC_SERVER_URL);
   }
@@ -78,7 +78,7 @@ export function validateCsrf(req: NextRequest): string | NextResponse | null {
   if (!candidate && referer) {
     try {
       const u = new URL(referer);
-      candidate = u.origin; // e.g. "https://www.vultstack.com"
+      candidate = u.origin; // e.g. "https://crm.vultstack.com"
     } catch {
       // malformed Referer — treat as missing
     }

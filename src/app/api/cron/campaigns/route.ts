@@ -13,7 +13,7 @@ function applyMergeFields(template: string, ctx: {
   brokerage: string;
   defaultPhone: string;
 }): string {
-  const BASE_URL = 'https://www.vultstack.com';
+  const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
   const unsubscribeUrl = `${BASE_URL}/api/campaigns/unsubscribe?token=${ctx.client.unsubscribe_token}`;
   return template
     .replaceAll('{{first_name}}', ctx.client.first_name || '')
@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
 
     // Generate a unique tracking ID for this send
     const trackingId = crypto.randomUUID();
-    const BASE_URL = 'https://www.vultstack.com';
+    const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
 
     let status: 'sent' | 'failed' | 'skipped' = 'sent';
     let providerId: string | null = null;

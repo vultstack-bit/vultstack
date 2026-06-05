@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { encryptToken } from '@/lib/token-crypto';
 
-const REDIRECT_URI = 'https://www.vultstack.com/api/gmail/callback';
-const CRM_URL      = 'https://crm.vultstack.com';
+const CRM_URL      = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
+const REDIRECT_URI = `${CRM_URL}/api/gmail/callback`;
 
 const SCOPES = [
   'https://www.googleapis.com/auth/gmail.readonly',

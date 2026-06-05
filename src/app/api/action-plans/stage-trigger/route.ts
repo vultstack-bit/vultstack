@@ -12,7 +12,7 @@ function fromAddress(_bu?: string) {
   return process.env.CRM_FROM_EMAIL || 'Vultstack <info@vultstack.com>';
 }
 function applyMergeFields(t: string, ctx: any): string {
-  const BASE_URL = 'https://www.vultstack.com';
+  const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
   return t
     .replaceAll('{{first_name}}', ctx.client.first_name || '')
     .replaceAll('{{last_name}}', ctx.client.last_name || '')

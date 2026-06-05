@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://www.vultstack.com';
+  const base = process.env.NEXT_PUBLIC_SERVER_URL ?? 'https://crm.vultstack.com';
   const syncSecret = process.env.INTERNAL_SYNC_SECRET ?? '';
   const res = await fetch(`${base}/api/email-leads/sync`, {
     method: 'POST',

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const FALLBACK_URL = 'https://www.vultstack.com';
+const FALLBACK_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
 
 // Allowlist of trusted domains we will redirect to from tracked email links.
 // Any URL not on this list falls back to the homepage.
 const ALLOWED_HOSTS = new Set([
-  'vultstack.com',
-  'www.vultstack.com',
+  'crm.vultstack.com',
   'vultstack.com',
   'www.vultstack.com',
 ]);

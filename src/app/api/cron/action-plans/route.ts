@@ -10,7 +10,7 @@ function applyMergeFields(template: string, ctx: {
   client: { first_name: string; last_name: string; email: string; type: string; unsubscribe_token: string };
   agent: { first_name: string; last_name: string; email: string; phone?: string };
 }): string {
-  const BASE_URL = 'https://www.vultstack.com';
+  const BASE_URL = process.env.NEXT_PUBLIC_SERVER_URL || 'https://crm.vultstack.com';
   const unsubscribeUrl = `${BASE_URL}/api/campaigns/unsubscribe?token=${ctx.client.unsubscribe_token}`;
   return template
     .replaceAll('{{first_name}}', ctx.client.first_name || '')
