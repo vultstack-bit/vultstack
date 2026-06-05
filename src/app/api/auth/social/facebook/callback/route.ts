@@ -99,6 +99,21 @@ export async function GET(req: NextRequest) {
     Date.now() + ((longLivedData.expires_in ?? 5_184_000) * 1000)
   ).toISOString();
 
+  // Fetch the app-scoped Facebook user id so the Deauthorize / Data Deletion
+  // callbacks (which only carry this id in their signed_request) can map back to
+  // these rows. Best-effort: a missing id just means those webhooks can't match.
+  let fbUserId: string | null = null;
+  try {
+    const meRes = await fetch(
+      `https://graph.facebook.com/v18.0/me?fields=id&access_token=${userToken}`
+    );
+    const meData = await meRes.json();
+    fbUserId = meData.id ?? null;
+  } catch (e) {
+    console.error('[facebook/callback] failed to fetch fb user id', e);
+  }
+  console.log('[facebook/callback] fb user id', { fbUserId });
+
   // Get pages managed by this user — include instagram_business_account in the same call
   const pagesRes = await fetch(
     `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,instagram_business_account&access_token=${userToken}`
@@ -129,6 +144,7 @@ export async function GET(req: NextRequest) {
           agent_id: userId,
           platform: 'facebook',
           platform_account_id: page.id,
+          platform_user_id: fbUserId,
           account_name: page.name,
           access_token: encryptToken(page.access_token),
           // Page tokens derived from long-lived user tokens never expire — store null
@@ -193,6 +209,7 @@ export async function GET(req: NextRequest) {
             agent_id: userId,
             platform: 'instagram',
             platform_account_id: igAccountId,
+            platform_user_id: fbUserId,
             account_name: igInfo.username || igInfo.name || `IG: ${page.name}`,
             access_token: encryptToken(page.access_token),
             refresh_token: encryptToken(userToken),
