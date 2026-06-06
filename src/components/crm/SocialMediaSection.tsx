@@ -124,10 +124,6 @@ function fmtNum(n: number): string {
   return String(n);
 }
 
-function initials(name: string): string {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-}
-
 // Status badge styles
 function statusBadge(status: PostStatus) {
   const map: Record<PostStatus, { bg: string; color: string }> = {
@@ -141,7 +137,7 @@ function statusBadge(status: PostStatus) {
 }
 
 // ── Main Component ─────────────────────────────────────────────────────────────
-export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
+export default function SocialMediaSection({ agentId, toast }: Props) {
   const [activeTab, setActiveTab] = useState<'publisher' | 'calendar' | 'inbox' | 'analytics'>('publisher');
 
   // Connections
@@ -152,8 +148,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
   const [postQueueTab, setPostQueueTab] = useState<'all' | 'scheduled' | 'drafts' | 'published' | 'failed'>('drafts');
-  const [publisherView, setPublisherView] = useState<'list' | 'detail' | 'builder'>('list');
-  const [activePost, setActivePost] = useState<SocialPost | null>(null);
 
   // Inbox
   const [inboxItems, setInboxItems] = useState<SocialInboxItem[]>([]);
@@ -176,7 +170,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   const [analytics, setAnalytics] = useState<SocialAnalyticsData[]>([]);
 
   // Composer state
-  const [composerOpen, setComposerOpen] = useState(true);
   const [composerContent, setComposerContent] = useState('');
   const [composerPlatforms, setComposerPlatforms] = useState<SocialPlatform[]>([]);
   // Specific connections (pages/accounts) to publish to. When a platform has multiple
@@ -218,7 +211,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   const [calendarView, setCalendarView] = useState<'month' | 'week'>('month');
 
   // Campaign
-  const [campaignImporting, setCampaignImporting] = useState(false);
   const [previewPostId, setPreviewPostId] = useState<string | null>(null);
 
   // Schedule from draft card
@@ -370,7 +362,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   }
 
   async function importCampaignAsDrafts(silent = false) {
-    setCampaignImporting(true);
     try {
       const today = new Date();
       today.setHours(9, 0, 0, 0); // Schedule at 9am each day
@@ -402,8 +393,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
       setPosts(data.posts || []);
     } catch {
       if (!silent) toast('Failed to import campaign');
-    } finally {
-      setCampaignImporting(false);
     }
   }
 
@@ -532,11 +521,9 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
     setComposerFirstComment('');
     setComposerNotes('');
     setEditingPost(null);
-    setActivePost(null);
     setShowAICaption(false);
     setShowFirstComment(false);
     setShowInternalNotes(false);
-    setPublisherView('list');
   }
 
   function isVideoUrl(url: string): boolean {
@@ -622,26 +609,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
     }
   }
 
-  function openDetailPost(post: SocialPost) {
-    setActivePost(post);
-    setPublisherView('detail');
-    // Pre-load composer state so editing from detail is instant
-    setEditingPost(post);
-    setComposerContent(post.content);
-    setComposerPlatforms(post.platforms);
-    setComposerConnectionIds(
-      post.connection_ids && post.connection_ids.length > 0
-        ? post.connection_ids
-        : connections.filter(c => post.platforms.includes(c.platform)).map(c => c.id)
-    );
-    setComposerScheduledAt(toDatetimeLocal(post.scheduled_at));
-    setPostMode(post.scheduled_at ? 'schedule' : 'now');
-    setComposerLinkUrl(post.link_url || '');
-    setComposerHashtags(post.hashtags.join(' '));
-    setComposerFirstComment(post.first_comment || '');
-    setComposerNotes(post.internal_notes || '');
-  }
-
   /** Convert an ISO timestamp to the YYYY-MM-DDTHH:MM format datetime-local inputs require */
   function toDatetimeLocal(iso: string | null | undefined): string {
     if (!iso) return '';
@@ -668,8 +635,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
     setComposerMediaUrls(post.media_urls || []);
     // Ensure schedule mode is active so the datetime picker is visible
     setPostMode(post.scheduled_at ? 'schedule' : 'now');
-    setComposerOpen(true);
-    setPublisherView('builder');
   }
 
   function togglePlatform(p: SocialPlatform) {
@@ -1848,7 +1813,7 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
               ))}
             </div>
             <button
-              onClick={() => { setActiveTab('publisher'); setComposerOpen(true); }}
+              onClick={() => setActiveTab('publisher')}
               style={{ padding: '8px 16px', borderRadius: 9, border: 'none', background: '#C9A84C', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
             >
               + New Post
@@ -1909,7 +1874,7 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
                       {cell.date.getDate()}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {dayPosts.slice(0, 3).map((post, pi) => (
+                      {dayPosts.slice(0, 3).map((post) => (
                         <button
                           key={post.id}
                           onClick={e => { e.stopPropagation(); openEditPost(post); setActiveTab('publisher'); }}
@@ -2521,7 +2486,7 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
         </div>
         {activeTab === 'publisher' && (
           <button
-            onClick={() => { resetComposer(); setComposerOpen(true); }}
+            onClick={() => resetComposer()}
             style={{ padding: '10px 20px', borderRadius: 10, border: 'none', background: '#1a1a2e', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
           >
             ✏️ Compose Post
