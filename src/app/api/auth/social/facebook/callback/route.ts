@@ -11,8 +11,7 @@ export async function GET(req: NextRequest) {
   const stateParam = req.nextUrl.searchParams.get('state');
   const error = req.nextUrl.searchParams.get('error');
 
-  // Log full raw URL so we can diagnose in Vercel logs what Facebook actually sent back
-  console.log('[facebook/callback] raw url:', req.url);
+  // Never log req.url — it carries the single-use OAuth `code`.
   console.log('[facebook/callback] start', { error, hasCode: !!code, hasState: !!stateParam, stateSample: stateParam?.slice(0, 16) });
 
   const stateParts = (stateParam ?? '').split(':');
@@ -31,8 +30,8 @@ export async function GET(req: NextRequest) {
       error,
       hasCode: !!code,
       hasState: !!stateParam,
-      rawUrl: req.url,
-      allParams: Object.fromEntries(req.nextUrl.searchParams.entries()),
+      errorReason: req.nextUrl.searchParams.get('error_reason'),
+      errorDescription: req.nextUrl.searchParams.get('error_description'),
     });
     const fbError = encodeURIComponent(error ?? (!code ? 'no_code' : 'no_state'));
     return done(`social=error&platform=facebook&reason=oauth_denied&fb_error=${fbError}`);

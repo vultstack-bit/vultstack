@@ -225,11 +225,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   const [schedulingPostId, setSchedulingPostId] = useState<string | null>(null);
   const [schedulingDate, setSchedulingDate] = useState('');
 
-  // Manual Instagram connect modal
-  const [showIgModal, setShowIgModal] = useState(false);
-  const [igHandle, setIgHandle] = useState('');
-  const [igSaving, setIgSaving] = useState(false);
-
   // Media upload ref
   const mediaInputRef = useRef<HTMLInputElement>(null);
 
@@ -409,30 +404,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
       if (!silent) toast('Failed to import campaign');
     } finally {
       setCampaignImporting(false);
-    }
-  }
-
-  async function saveManualInstagram() {
-    const handle = igHandle.replace(/^@/, '').trim();
-    if (!handle) return;
-    setIgSaving(true);
-    try {
-      // Pass the Facebook page_id so the endpoint can link the page token
-      const fbConn = connections.find(c => c.platform === 'facebook');
-      const res = await fetch('/api/crm/social/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform: 'instagram', account_name: handle, page_id: fbConn?.page_id ?? null }),
-      });
-      if (!res.ok) throw new Error();
-      toast(`✅ Instagram @${handle} connected!`);
-      setShowIgModal(false);
-      setIgHandle('');
-      loadConnections();
-    } catch {
-      toast('Failed to connect Instagram');
-    } finally {
-      setIgSaving(false);
     }
   }
 
@@ -2809,57 +2780,6 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
           </div>
         );
       })()}
-
-      {/* Manual Instagram connect modal */}
-      {showIgModal && (
-        <div
-          onClick={() => setShowIgModal(false)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{ background: '#fff', borderRadius: 16, padding: 32, width: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <span style={{ fontSize: 28 }}>📸</span>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 700, color: '#1a1a2e' }}>Connect Instagram</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>Enter your Instagram username to link it to your Facebook Page</div>
-              </div>
-            </div>
-
-            <div style={{ background: '#fef9c3', border: '1px solid #fde68a', borderRadius: 8, padding: '10px 14px', marginBottom: 20, fontSize: 12, color: '#92400e' }}>
-              💡 Full Instagram OAuth requires Meta App Review. This manually links your handle using your connected Facebook Page token.
-            </div>
-
-            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>Instagram Username</label>
-            <input
-              autoFocus
-              value={igHandle}
-              onChange={e => setIgHandle(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && saveManualInstagram()}
-              placeholder="@yourhandle"
-              style={{ width: '100%', padding: '10px 14px', border: '1.5px solid #e5e7eb', borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: 20 }}
-            />
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button
-                onClick={() => setShowIgModal(false)}
-                style={{ flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e5e7eb', background: '#f9fafb', fontSize: 13, cursor: 'pointer', color: '#6b7280' }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={saveManualInstagram}
-                disabled={igSaving || !igHandle.trim()}
-                style={{ flex: 2, padding: '10px', borderRadius: 8, border: 'none', background: '#E1306C', color: '#fff', fontSize: 13, fontWeight: 700, cursor: igSaving || !igHandle.trim() ? 'not-allowed' : 'pointer', opacity: igSaving || !igHandle.trim() ? 0.6 : 1 }}
-              >
-                {igSaving ? 'Connecting…' : 'Connect Instagram'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const stateParam = req.nextUrl.searchParams.get('state');
   const error = req.nextUrl.searchParams.get('error');
 
-  console.log('[instagram/callback] raw url:', req.url);
+  // Never log req.url — it carries the single-use OAuth `code`.
   console.log('[instagram/callback] start', { error, hasCode: !!code, hasState: !!stateParam });
 
   const stateParts = (stateParam ?? '').split(':');
