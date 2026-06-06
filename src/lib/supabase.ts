@@ -125,7 +125,7 @@ export interface SoldProperty {
 
 // ─── Data Fetching ────────────────────────────────────────────────────────────
 
-export async function getListings(status = 'active'): Promise<Listing[]> {
+export async function getListings(_status = 'active'): Promise<Listing[]> {
   const { data, error } = await supabase
     .from('listings')
     .select('*')

@@ -483,7 +483,6 @@ export async function POST(req: import('next/server').NextRequest) {
 
         const from    = getHeader(msg, 'from');
         const subject = getHeader(msg, 'subject');
-        const body    = decodeBody(msg);
 
         const source = detectSource(from);
         if (!source) continue;

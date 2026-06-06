@@ -56,14 +56,6 @@ const CLIENT_TYPE_COLORS: Record<string, string> = {
   'Agent':    'background:#e0f2fe;color:#075985',
   'Broker':   'background:#f1f5f9;color:#334155',
 };
-const STAGE_CLS: Record<string, string> = {
-  'Prospect': 'bg-gray-100 text-gray-600',
-  'Active': 'bg-blue-100 text-blue-700',
-  'LOI': 'bg-purple-100 text-purple-700',
-  'In Contract': 'bg-amber-100 text-amber-700',
-  'Closed': 'bg-green-100 text-green-700',
-  'Lost': 'bg-red-100 text-red-700',
-};
 
 function today() { return new Date().toISOString().slice(0, 10); }
 

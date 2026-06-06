@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const user = await getCrmUser();
   if (!user) return unauthorized();
 
-  const { count, business_unit, selected } = await req.json();
+  const { count, selected } = await req.json();
 
   // Re-fetch agent identity from the DB — never trust client-supplied name/email
   const supabase = adminClient();
