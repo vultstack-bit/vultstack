@@ -45,7 +45,12 @@ export async function GET(req: NextRequest) {
   const params = new URLSearchParams({
     client_id: process.env.FACEBOOK_APP_ID!,
     redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/social/facebook/callback`,
-    scope: 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,business_management',
+    // Standard Facebook Login scopes (NOT the `instagram_business_*` variants,
+    // which only work under "Facebook Login for Business" and hard-fail the whole
+    // OAuth dialog with "Invalid Scopes" on a standard-Login app). This exact set
+    // is the proven recipe that connects IG via a linked Page. `business_management`
+    // was removed: it's unused in code and needs Advanced Access for non-admins.
+    scope: 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish',
     response_type: 'code',
     state: `${userId}:${nonce}${isPopup ? ':popup' : ''}`,
   });
