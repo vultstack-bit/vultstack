@@ -29,3 +29,6 @@ media/
 
 # Claude local files
 .claude/
+
+# TS incremental build cache
+tsconfig.tsbuildinfo
