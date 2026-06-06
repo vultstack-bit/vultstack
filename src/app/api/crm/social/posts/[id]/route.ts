@@ -11,7 +11,7 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { content, scheduled_at, status, platforms, media_urls, link_url, hashtags, first_comment, internal_notes } = body;
+  const { content, scheduled_at, status, platforms, connection_ids, media_urls, link_url, hashtags, first_comment, internal_notes } = body;
 
   const supabase = adminClient();
 
@@ -30,6 +30,7 @@ export async function PATCH(
   if (scheduled_at !== undefined) updates.scheduled_at = scheduled_at || null;
   if (status !== undefined) updates.status = status;
   if (platforms !== undefined) updates.platforms = platforms;
+  if (connection_ids !== undefined) updates.connection_ids = Array.isArray(connection_ids) ? connection_ids : [];
   if (media_urls !== undefined) updates.media_urls = media_urls;
   if (link_url !== undefined) updates.link_url = link_url || null;
   if (hashtags !== undefined) updates.hashtags = hashtags;

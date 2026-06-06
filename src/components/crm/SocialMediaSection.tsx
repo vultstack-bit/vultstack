@@ -179,6 +179,9 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   const [composerOpen, setComposerOpen] = useState(true);
   const [composerContent, setComposerContent] = useState('');
   const [composerPlatforms, setComposerPlatforms] = useState<SocialPlatform[]>([]);
+  // Specific connections (pages/accounts) to publish to. When a platform has multiple
+  // connected pages, the user picks which ones here; empty for a platform = all of its pages.
+  const [composerConnectionIds, setComposerConnectionIds] = useState<string[]>([]);
   const [composerMediaUrls, setComposerMediaUrls] = useState<string[]>([]);
   const [composerScheduledAt, setComposerScheduledAt] = useState('');
   const [composerLinkUrl, setComposerLinkUrl] = useState('');
@@ -436,10 +439,16 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   async function savePost(status: 'draft' | 'scheduled' | 'published') {
     setComposerLoading(true);
     try {
+      // Connections eligible for the selected platforms
+      const eligible = connections.filter(c => composerPlatforms.includes(c.platform));
+      // User's explicit page choices, restricted to eligible platforms
+      const chosen = composerConnectionIds.filter(id => eligible.some(c => c.id === id));
+      // Fall back to all eligible pages if the user didn't narrow it down
+      const connectionIds = chosen.length > 0 ? chosen : eligible.map(c => c.id);
       const body = {
         content: composerContent,
         platforms: composerPlatforms,
-        connection_ids: connections.filter(c => composerPlatforms.includes(c.platform)).map(c => c.id),
+        connection_ids: connectionIds,
         scheduled_at: status === 'scheduled' && composerScheduledAt
           ? new Date(composerScheduledAt).toISOString()
           : null,
@@ -544,6 +553,7 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   function resetComposer() {
     setComposerContent('');
     setComposerPlatforms([]);
+    setComposerConnectionIds([]);
     setComposerMediaUrls([]);
     setComposerScheduledAt('');
     setComposerLinkUrl('');
@@ -648,6 +658,11 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
     setEditingPost(post);
     setComposerContent(post.content);
     setComposerPlatforms(post.platforms);
+    setComposerConnectionIds(
+      post.connection_ids && post.connection_ids.length > 0
+        ? post.connection_ids
+        : connections.filter(c => post.platforms.includes(c.platform)).map(c => c.id)
+    );
     setComposerScheduledAt(toDatetimeLocal(post.scheduled_at));
     setPostMode(post.scheduled_at ? 'schedule' : 'now');
     setComposerLinkUrl(post.link_url || '');
@@ -669,6 +684,11 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
     setEditingPost(post);
     setComposerContent(post.content);
     setComposerPlatforms(post.platforms);
+    setComposerConnectionIds(
+      post.connection_ids && post.connection_ids.length > 0
+        ? post.connection_ids
+        : connections.filter(c => post.platforms.includes(c.platform)).map(c => c.id)
+    );
     setComposerScheduledAt(toDatetimeLocal(post.scheduled_at));
     setComposerLinkUrl(post.link_url || '');
     setComposerHashtags(post.hashtags.join(' '));
@@ -682,8 +702,24 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
   }
 
   function togglePlatform(p: SocialPlatform) {
-    setComposerPlatforms(prev =>
-      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+    setComposerPlatforms(prev => {
+      const isOn = prev.includes(p);
+      if (isOn) {
+        // Turning a platform off: drop its connections from the selection too
+        const idsForP = connections.filter(c => c.platform === p).map(c => c.id);
+        setComposerConnectionIds(ids => ids.filter(id => !idsForP.includes(id)));
+        return prev.filter(x => x !== p);
+      }
+      // Turning a platform on: default-select all of its connected pages
+      const idsForP = connections.filter(c => c.platform === p).map(c => c.id);
+      setComposerConnectionIds(ids => Array.from(new Set([...ids, ...idsForP])));
+      return [...prev, p];
+    });
+  }
+
+  function toggleConnection(id: string) {
+    setComposerConnectionIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
     );
   }
 
@@ -808,6 +844,49 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
                     ▶️ YouTube Shorts — upload a short vertical video (≤ 60 sec, 9:16) below
                   </div>
                 )}
+
+                {/* Per-page picker — shown when a selected platform has more than one connected page/account */}
+                {composerPlatforms
+                  .filter(p => connections.filter(c => c.platform === p).length > 1)
+                  .map(p => {
+                    const pages = connections.filter(c => c.platform === p);
+                    return (
+                      <div key={`pages-${p}`} style={{ marginTop: 12 }}>
+                        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: '#9ca3af', marginBottom: 8 }}>
+                          {platformEmoji(p)} {platformLabel(p)} — choose page{pages.length > 1 ? '(s)' : ''}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {pages.map(conn => {
+                            const on = composerConnectionIds.includes(conn.id);
+                            return (
+                              <button
+                                key={conn.id}
+                                onClick={() => toggleConnection(conn.id)}
+                                title={conn.account_name}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                                  padding: '7px 12px', borderRadius: 9, cursor: 'pointer',
+                                  border: `1.5px solid ${on ? platformColor(p) : '#e5e7eb'}`,
+                                  background: on ? `${platformColor(p)}14` : '#f9fafb',
+                                  transition: 'all .15s',
+                                }}
+                              >
+                                <span style={{ fontSize: 12 }}>{on ? '✓' : '○'}</span>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: on ? platformColor(p) : '#6b7280' }}>
+                                  {conn.account_name}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {composerConnectionIds.filter(id => pages.some(pg => pg.id === id)).length === 0 && (
+                          <div style={{ fontSize: 11, color: '#b45309', marginTop: 6 }}>
+                            ⚠️ No page selected — this post won’t publish to {platformLabel(p)}.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
 
               {/* AI Caption */}
@@ -1638,10 +1717,7 @@ export default function SocialMediaSection({ agentId, isAdmin, toast }: Props) {
                 return (
                   <button
                     key={p}
-                    onClick={() => {
-                      if (p === 'instagram') setShowIgModal(true);
-                      else openOAuthPopup(p);
-                    }}
+                    onClick={() => openOAuthPopup(p)}
                     title={`Connect ${platformLabel(p)}`}
                     style={{
                       display: 'inline-flex', alignItems: 'center', gap: 6,

@@ -4,18 +4,20 @@ import crypto from 'crypto';
 import { rateLimit } from '@/lib/ratelimit';
 import { createClient } from '@supabase/supabase-js';
 
+// Instagram API with Instagram Login (no Facebook Page required).
+// The IG account authenticates directly on instagram.com, so accounts that are
+// not registered as an instagram_business_account on a Facebook Page (e.g. @vultstack)
+// can still grant content-publishing access.
+
 export async function GET(req: NextRequest) {
   const rl = await rateLimit(req, 'oauth');
   if (!rl.success) return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
 
-  // userId is required — must belong to a real CRM profile
   const userId = req.nextUrl.searchParams.get('userId');
   if (!userId) {
     return NextResponse.json({ error: 'Missing userId' }, { status: 400 });
   }
 
-  // Verify the user exists in crm_profiles (light check, no full auth required here —
-  // security is enforced by the CSRF nonce verified in the callback)
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -32,25 +34,24 @@ export async function GET(req: NextRequest) {
   }
 
   const nonce = crypto.randomBytes(32).toString('hex');
-
   const isPopup = req.nextUrl.searchParams.get('popup') === '1';
 
-  console.log('[facebook/auth] building redirect', {
+  console.log('[instagram/auth] building redirect', {
     userId,
-    appId: process.env.FACEBOOK_APP_ID,
+    appId: process.env.INSTAGRAM_APP_ID,
     baseUrl: process.env.NEXT_PUBLIC_BASE_URL,
     isPopup,
   });
 
   const params = new URLSearchParams({
-    client_id: process.env.FACEBOOK_APP_ID!,
-    redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/social/facebook/callback`,
-    scope: 'pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish,business_management',
+    client_id: process.env.INSTAGRAM_APP_ID!,
+    redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/api/auth/social/instagram/callback`,
+    scope: 'instagram_business_basic,instagram_business_content_publish',
     response_type: 'code',
     state: `${userId}:${nonce}${isPopup ? ':popup' : ''}`,
   });
 
-  (await cookies()).set('fb_oauth_nonce', nonce, {
+  (await cookies()).set('ig_oauth_nonce', nonce, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     maxAge: 600,
@@ -58,5 +59,5 @@ export async function GET(req: NextRequest) {
     sameSite: 'lax',
   });
 
-  return NextResponse.redirect(`https://www.facebook.com/v18.0/dialog/oauth?${params}`);
+  return NextResponse.redirect(`https://www.instagram.com/oauth/authorize?${params}`);
 }

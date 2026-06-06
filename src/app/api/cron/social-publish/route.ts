@@ -48,33 +48,42 @@ export async function GET(req: NextRequest) {
       .eq('agent_id', post.agent_id)
       .eq('is_active', true);
 
-    for (const platform of (post.platforms as string[])) {
-      const connection = connections?.find(c => c.platform === platform);
+    const chosenIds = (post.connection_ids as string[] | null) ?? [];
 
-      if (!connection) {
+    for (const platform of (post.platforms as string[])) {
+      // Publish to the specific page(s) the user chose; fall back to all active pages on the platform
+      const platformConns = (connections ?? []).filter(c => c.platform === platform);
+      const targets = chosenIds.length > 0
+        ? platformConns.filter(c => chosenIds.includes(c.id))
+        : platformConns;
+
+      if (targets.length === 0) {
         failures.push(`${platform}: no active connection`);
         continue;
       }
 
-      try {
-        // publishToplatform handles token decryption internally via decryptToken
-        const result = await publishToplatform(platform, connection, {
-          content: post.content,
-          media_urls: post.media_urls || [],
-          link_url: post.link_url || undefined,
-        });
+      for (const connection of targets) {
+        const label = targets.length > 1 ? `${platform}:${connection.account_name}` : platform;
+        try {
+          // publishToplatform handles token decryption internally via decryptToken
+          const result = await publishToplatform(platform, connection, {
+            content: post.content,
+            media_urls: post.media_urls || [],
+            link_url: post.link_url || undefined,
+          });
 
-        if (result.success && result.platform_post_id) {
-          platformPostIds[platform] = result.platform_post_id;
-        } else {
-          failures.push(`${platform}: ${result.error}`);
+          if (result.success && result.platform_post_id) {
+            platformPostIds[label] = result.platform_post_id;
+          } else {
+            failures.push(`${label}: ${result.error}`);
+          }
+        } catch (e: unknown) {
+          failures.push(`${label}: ${e instanceof Error ? e.message : String(e)}`);
         }
-      } catch (e: unknown) {
-        failures.push(`${platform}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
-    const allFailed = failures.length === (post.platforms as string[]).length;
+    const allFailed = Object.keys(platformPostIds).length === 0 && failures.length > 0;
     const newStatus = allFailed ? 'failed' : 'published';
     const failNote = failures.length > 0
       ? `\n[CRON] Partial/full failure at ${now.toISOString()}: ${failures.join('; ')}`

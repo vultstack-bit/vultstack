@@ -109,8 +109,49 @@ export async function proactiveTokenRefresh(): Promise<void> {
         await refreshFacebookUserToken(conn as SocialConnection);
       }
     }
+
+    // Instagram-Login connections (page_id null) carry a self-refreshing long-lived
+    // token that expires in ~60 days. Renew any expiring within 10 days.
+    const { data: igConns } = await supabase
+      .from('social_connections')
+      .select('*')
+      .eq('platform', 'instagram')
+      .eq('is_active', true)
+      .is('page_id', null)
+      .lte('expires_at', tenDaysFromNow);
+
+    if (igConns?.length) {
+      for (const conn of igConns) {
+        await refreshInstagramToken(conn as SocialConnection);
+      }
+    }
   } catch (e) {
     console.error('[social-publish] proactiveTokenRefresh error:', e);
+  }
+}
+
+// ── Instagram (Instagram Login) token refresh ──────────────────────────────────
+// Long-lived Instagram tokens can be extended another 60 days as long as they are
+// at least 24h old and not expired, via the ig_refresh_token grant.
+
+async function refreshInstagramToken(connection: SocialConnection): Promise<void> {
+  try {
+    const token = decryptToken(connection.access_token);
+    const res = await fetch(
+      `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`
+    );
+    const data = await res.json();
+    if (!data.access_token) return;
+
+    const supabase = adminClient();
+    await supabase.from('social_connections').update({
+      access_token: encryptToken(data.access_token),
+      refresh_token: encryptToken(data.access_token),
+      expires_at: new Date(Date.now() + (data.expires_in ?? 5_184_000) * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', connection.id);
+  } catch (e) {
+    console.error('[social-publish] Instagram token refresh failed:', e);
   }
 }
 
@@ -197,10 +238,17 @@ async function publishToInstagram(connection: SocialConnection, post: PostPayloa
   const token = decryptToken(connection.access_token);
   const igId = connection.platform_account_id;
 
+  // page_id is set only for IG accounts linked via a Facebook Page (Facebook Login).
+  // Accounts connected via Instagram API with Instagram Login have page_id=null and
+  // must publish through graph.instagram.com instead of graph.facebook.com.
+  const base = connection.page_id
+    ? 'https://graph.facebook.com/v18.0'
+    : 'https://graph.instagram.com/v21.0';
+
   if (post.media_urls.length > 1) {
     const childIds: string[] = [];
     for (const url of post.media_urls) {
-      const r = await fetch(`https://graph.facebook.com/v18.0/${igId}/media`, {
+      const r = await fetch(`${base}/${igId}/media`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image_url: url, is_carousel_item: true, access_token: token }),
@@ -209,7 +257,7 @@ async function publishToInstagram(connection: SocialConnection, post: PostPayloa
       if (!d.id) return { success: false, error: d.error?.message || 'IG carousel item failed' };
       childIds.push(d.id);
     }
-    const carouselRes = await fetch(`https://graph.facebook.com/v18.0/${igId}/media`, {
+    const carouselRes = await fetch(`${base}/${igId}/media`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ media_type: 'CAROUSEL', children: childIds.join(','), caption: post.content, access_token: token }),
@@ -217,7 +265,7 @@ async function publishToInstagram(connection: SocialConnection, post: PostPayloa
     const carousel = await carouselRes.json();
     if (!carousel.id) return { success: false, error: carousel.error?.message || 'IG carousel container failed' };
 
-    const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igId}/media_publish`, {
+    const publishRes = await fetch(`${base}/${igId}/media_publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ creation_id: carousel.id, access_token: token }),
@@ -227,7 +275,7 @@ async function publishToInstagram(connection: SocialConnection, post: PostPayloa
     return { success: false, error: published.error?.message || 'IG carousel publish failed' };
   }
 
-  const containerRes = await fetch(`https://graph.facebook.com/v18.0/${igId}/media`, {
+  const containerRes = await fetch(`${base}/${igId}/media`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ image_url: post.media_urls[0], caption: post.content, access_token: token }),
@@ -235,7 +283,7 @@ async function publishToInstagram(connection: SocialConnection, post: PostPayloa
   const container = await containerRes.json();
   if (!container.id) return { success: false, error: container.error?.message || 'IG container creation failed' };
 
-  const publishRes = await fetch(`https://graph.facebook.com/v18.0/${igId}/media_publish`, {
+  const publishRes = await fetch(`${base}/${igId}/media_publish`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ creation_id: container.id, access_token: token }),
